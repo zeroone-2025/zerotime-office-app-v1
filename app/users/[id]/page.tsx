@@ -63,7 +63,7 @@ export default function UserDetailPage() {
                 nickname: userData.nickname || '',
                 role: userData.role,
                 dept_code: userData.dept_code || '',
-                school: userData.school,
+                school: userData.school || '전북대',
             });
         } catch (error) {
             console.error('Failed to load user data:', error);
@@ -141,7 +141,7 @@ export default function UserDetailPage() {
                                             nickname: user.nickname || '',
                                             role: user.role,
                                             dept_code: user.dept_code || '',
-                                            school: user.school,
+                                            school: user.school || '전북대',
                                         });
                                     }}>취소</Button>
                                 </div>
