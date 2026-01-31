@@ -135,6 +135,9 @@ export const usersAPI = {
 
     update: (userId: number, data: { nickname?: string; role?: string; dept_code?: string; school?: string }) =>
         api.patch<AdminUser>(`/admin/users/${userId}`, data),
+
+    delete: (userId: number) =>
+        api.delete(`/admin/users/${userId}`),
 };
 
 // 공지 관리

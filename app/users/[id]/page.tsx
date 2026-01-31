@@ -16,10 +16,21 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { getBoardName } from '@/lib/constants';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const roleLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' }> = {
     user: { label: '일반', variant: 'default' },
@@ -91,6 +102,18 @@ export default function UserDetailPage() {
         }
     };
 
+    const handleDelete = async () => {
+        try {
+            await usersAPI.delete(userId);
+            alert('사용자가 삭제되었습니다.');
+            router.push('/users');
+        } catch (error: any) {
+            console.error('Failed to delete user:', error);
+            const errorMessage = error.response?.data?.detail || '사용자 삭제에 실패했습니다.';
+            alert(errorMessage);
+        }
+    };
+
     if (loading) {
         return <div className="flex items-center justify-center h-96">로딩 중...</div>;
     }
@@ -103,14 +126,42 @@ export default function UserDetailPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div>
-                    <h1 className="text-3xl font-bold">유저 상세</h1>
-                    <p className="text-muted-foreground mt-2">{user.email}</p>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div>
+                        <h1 className="text-3xl font-bold">유저 상세</h1>
+                        <p className="text-muted-foreground mt-2">{user.email}</p>
+                    </div>
                 </div>
+                {user.role !== 'super_admin' && (
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                삭제
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>사용자 삭제 확인</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    정말로 <strong>{user.email}</strong> 사용자를 삭제하시겠습니까?
+                                    <br />
+                                    이 작업은 되돌릴 수 없으며, 모든 관련 데이터(읽음, 즐겨찾기 등)가 함께 삭제됩니다.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>취소</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    삭제
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </div>
 
             <Tabs defaultValue="info" className="space-y-4">
