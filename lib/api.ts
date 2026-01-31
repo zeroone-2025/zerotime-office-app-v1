@@ -65,9 +65,9 @@ export interface AdminUser {
 
 export interface AdminUserDetail extends AdminUser {
     google_id: string;
-    updated_at: string;
-    recent_reads: Array<{ notice_id: number; read_at: string }>;
-    favorites: Array<{ notice_id: number; favorited_at: string }>;
+    updated_at?: string;
+    recent_reads?: Array<{ notice_id: number; read_at: string }>;
+    favorites?: Array<{ notice_id: number; favorited_at: string }>;
     subscriptions: string[];
 }
 
