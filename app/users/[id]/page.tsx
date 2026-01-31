@@ -74,12 +74,20 @@ export default function UserDetailPage() {
 
     const handleSave = async () => {
         try {
+            // super_admin으로 변경 시도 차단
+            if (editData.role === 'super_admin') {
+                alert('최고관리자 권한은 환경변수(.env)로만 관리됩니다.');
+                return;
+            }
+
             await usersAPI.update(userId, editData);
             await loadUserData();
             setIsEditing(false);
-        } catch (error) {
+            alert('사용자 정보가 성공적으로 수정되었습니다.');
+        } catch (error: any) {
             console.error('Failed to update user:', error);
-            alert('사용자 정보 수정에 실패했습니다.');
+            const errorMessage = error.response?.data?.detail || '사용자 정보 수정에 실패했습니다.';
+            alert(errorMessage);
         }
     };
 
@@ -118,11 +126,24 @@ export default function UserDetailPage() {
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>사용자 정보</CardTitle>
                             {!isEditing ? (
-                                <Button onClick={() => setIsEditing(true)}>수정</Button>
+                                <Button
+                                    onClick={() => setIsEditing(true)}
+                                    disabled={user.role === 'super_admin'}
+                                >
+                                    {user.role === 'super_admin' ? '수정 불가' : '수정'}
+                                </Button>
                             ) : (
                                 <div className="flex gap-2">
                                     <Button onClick={handleSave}>저장</Button>
-                                    <Button variant="outline" onClick={() => setIsEditing(false)}>취소</Button>
+                                    <Button variant="outline" onClick={() => {
+                                        setIsEditing(false);
+                                        setEditData({
+                                            nickname: user.nickname || '',
+                                            role: user.role,
+                                            dept_code: user.dept_code || '',
+                                            school: user.school,
+                                        });
+                                    }}>취소</Button>
                                 </div>
                             )}
                         </CardHeader>
@@ -150,19 +171,34 @@ export default function UserDetailPage() {
                                 <div>
                                     <Label>역할</Label>
                                     {isEditing ? (
-                                        <Select value={editData.role} onValueChange={(value) => setEditData({ ...editData, role: value })}>
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="user">일반</SelectItem>
-                                                <SelectItem value="admin">관리자</SelectItem>
-                                                <SelectItem value="super_admin">최고관리자</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="space-y-2">
+                                            <Select
+                                                value={editData.role}
+                                                onValueChange={(value) => setEditData({ ...editData, role: value })}
+                                                disabled={user.role === 'super_admin'}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="user">일반</SelectItem>
+                                                    <SelectItem value="admin">관리자</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {user.role === 'super_admin' && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    ⚠️ 최고관리자는 환경변수(.env)로만 관리됩니다
+                                                </p>
+                                            )}
+                                        </div>
                                     ) : (
-                                        <div className="mt-1">
+                                        <div className="mt-1 space-y-1">
                                             <Badge variant={roleConfig.variant}>{roleConfig.label}</Badge>
+                                            {user.role === 'super_admin' && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    환경변수로 관리됨
+                                                </p>
+                                            )}
                                         </div>
                                     )}
                                 </div>
