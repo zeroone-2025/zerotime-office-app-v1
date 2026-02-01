@@ -57,6 +57,7 @@ export interface AdminUser {
     profile_image?: string;
     role: 'user' | 'admin' | 'super_admin';
     admission_year?: number;
+    is_active: number;  // 1=활성, 0=비활성
     created_at: string;
     read_count: number;
     favorite_count: number;
@@ -64,6 +65,11 @@ export interface AdminUser {
 }
 
 export interface AdminUserDetail extends AdminUser {
+    google_id: string;
+    updated_at?: string;
+    is_active: number;  // 1=활성, 0=비활성
+    recent_reads?: Array<{ notice_id: number; read_at: string }>;
+    favorites?: Array<{ notice_id: number; favorited_at: string }>;
     subscriptions: string[];
 }
 
@@ -131,6 +137,15 @@ export const usersAPI = {
 
     update: (userId: number, data: { nickname?: string; role?: string; dept_code?: string; school?: string }) =>
         api.patch<AdminUser>(`/admin/users/${userId}`, data),
+
+    softDelete: (userId: number) =>
+        api.delete(`/admin/users/${userId}/soft`),
+
+    hardDelete: (userId: number) =>
+        api.delete(`/admin/users/${userId}/hard`),
+
+    restore: (userId: number) =>
+        api.post(`/admin/users/${userId}/restore`),
 };
 
 // 공지 관리

@@ -54,12 +54,9 @@ export default function NoticesPage() {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [deleteId, setDeleteId] = useState<number | null>(null);
 
-    useEffect(() => {
-        loadNotices();
-    }, []);
-
     const loadNotices = async () => {
         try {
+            setLoading(true);
             const params: any = { limit: 100 };
             if (boardFilter !== 'all') params.board_code = boardFilter;
 

@@ -20,8 +20,8 @@ export default function LoginPage() {
   }, [router]);
 
   const handleGoogleLogin = () => {
-    // 백엔드의 Google OAuth 엔드포인트로 리다이렉트
-    window.location.href = `${API_BASE_URL}/auth/google/login`;
+    // 백엔드의 Google OAuth 엔드포인트로 리다이렉트 (관리자 페이지용)
+    window.location.href = `${API_BASE_URL}/auth/google/login?redirect_to=admin`;
   };
 
   return (
