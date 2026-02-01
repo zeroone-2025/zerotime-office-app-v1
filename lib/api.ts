@@ -57,7 +57,7 @@ export interface AdminUser {
     profile_image?: string;
     role: 'user' | 'admin' | 'super_admin';
     admission_year?: number;
-    is_active: number;  // 1=활성, 0=비활성(소프트 삭제)
+    is_active: number;  // 1=활성, 0=비활성
     created_at: string;
     read_count: number;
     favorite_count: number;
@@ -67,7 +67,7 @@ export interface AdminUser {
 export interface AdminUserDetail extends AdminUser {
     google_id: string;
     updated_at?: string;
-    is_active: number;  // 1=활성, 0=비활성(소프트 삭제)
+    is_active: number;  // 1=활성, 0=비활성
     recent_reads?: Array<{ notice_id: number; read_at: string }>;
     favorites?: Array<{ notice_id: number; favorited_at: string }>;
     subscriptions: string[];

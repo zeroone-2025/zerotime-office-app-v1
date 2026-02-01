@@ -126,11 +126,11 @@ export default function UserDetailPage() {
     const handleSoftDelete = async () => {
         try {
             await usersAPI.softDelete(userId);
-            alert('사용자가 소프트 삭제되었습니다.');
+            alert('사용자가 비활성화되었습니다.');
             await loadUserData();
         } catch (error: any) {
-            console.error('Failed to soft delete user:', error);
-            const errorMessage = error.response?.data?.detail || '사용자 소프트 삭제에 실패했습니다.';
+            console.error('Failed to deactivate user:', error);
+            const errorMessage = error.response?.data?.detail || '사용자 비활성화에 실패했습니다.';
             alert(errorMessage);
         }
     };
@@ -138,11 +138,11 @@ export default function UserDetailPage() {
     const handleHardDelete = async () => {
         try {
             await usersAPI.hardDelete(userId);
-            alert('사용자가 완전히 삭제되었습니다.');
+            alert('사용자가 강제 삭제되었습니다.');
             router.push('/users');
         } catch (error: any) {
-            console.error('Failed to hard delete user:', error);
-            const errorMessage = error.response?.data?.detail || '사용자 하드 삭제에 실패했습니다.';
+            console.error('Failed to force delete user:', error);
+            const errorMessage = error.response?.data?.detail || '사용자 강제 삭제에 실패했습니다.';
             alert(errorMessage);
         }
     };
@@ -208,7 +208,7 @@ export default function UserDetailPage() {
                                 {user.is_active === 1 && (
                                     <DropdownMenuItem onClick={() => setSoftDeleteOpen(true)}>
                                         <Trash2 className="h-4 w-4 mr-2" />
-                                        소프트 삭제
+                                        비활성화
                                     </DropdownMenuItem>
                                 )}
                                 {currentUser?.role === 'super_admin' && (
@@ -219,22 +219,22 @@ export default function UserDetailPage() {
                                             className="text-red-600"
                                         >
                                             <Skull className="h-4 w-4 mr-2" />
-                                            완전 삭제
+                                            강제 삭제
                                         </DropdownMenuItem>
                                     </>
                                 )}
                             </DropdownMenuContent>
                         </DropdownMenu>
 
-                        {/* 소프트 삭제 확인 다이얼로그 */}
+                        {/* 비활성화 확인 다이얼로그 */}
                         <AlertDialog open={softDeleteOpen} onOpenChange={setSoftDeleteOpen}>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle>소프트 삭제 확인</AlertDialogTitle>
+                                    <AlertDialogTitle>사용자 비활성화 확인</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        <strong>{user.email}</strong> 사용자를 소프트 삭제하시겠습니까?
+                                        <strong>{user.email}</strong> 사용자를 비활성화하시겠습니까?
                                         <br /><br />
-                                        소프트 삭제된 사용자는:
+                                        비활성화된 사용자는:
                                         <ul className="list-disc list-inside mt-2 space-y-1">
                                             <li>로그인할 수 없습니다</li>
                                             <li>사용자 목록에서 "비활성" 상태로 표시됩니다</li>
@@ -251,19 +251,19 @@ export default function UserDetailPage() {
                                         }}
                                         className="bg-orange-600 hover:bg-orange-700"
                                     >
-                                        소프트 삭제
+                                        비활성화
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
 
-                        {/* 하드 삭제 확인 다이얼로그 */}
+                        {/* 강제 삭제 확인 다이얼로그 */}
                         <AlertDialog open={hardDeleteOpen} onOpenChange={setHardDeleteOpen}>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle className="text-red-600">⚠️ 완전 삭제 경고</AlertDialogTitle>
+                                    <AlertDialogTitle className="text-red-600">⚠️ 강제 삭제 경고</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        <strong className="text-red-600">{user.email}</strong> 사용자를 완전히 삭제하시겠습니까?
+                                        <strong className="text-red-600">{user.email}</strong> 사용자를 강제 삭제하시겠습니까?
                                         <br /><br />
                                         <strong className="text-red-600">이 작업은 되돌릴 수 없습니다!</strong>
                                         <ul className="list-disc list-inside mt-2 space-y-1">
@@ -284,7 +284,7 @@ export default function UserDetailPage() {
                                         }}
                                         className="bg-red-600 hover:bg-red-700"
                                     >
-                                        완전 삭제
+                                        강제 삭제
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
