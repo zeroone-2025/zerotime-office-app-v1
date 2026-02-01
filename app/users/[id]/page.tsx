@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { usersAPI, type AdminUserDetail, type Notice, type Keyword } from '@/lib/api';
+import { usersAPI, authAPI, type AdminUserDetail, type Notice, type Keyword } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, MoreVertical, RotateCcw, Skull } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { getBoardName } from '@/lib/constants';
@@ -29,8 +29,14 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 const roleLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' }> = {
     user: { label: '일반', variant: 'default' },
@@ -44,6 +50,7 @@ export default function UserDetailPage() {
     const userId = Number(params.id);
 
     const [user, setUser] = useState<AdminUserDetail | null>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
     const [reads, setReads] = useState<Notice[]>([]);
     const [favorites, setFavorites] = useState<Notice[]>([]);
     const [keywords, setKeywords] = useState<Keyword[]>([]);
@@ -53,9 +60,23 @@ export default function UserDetailPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState({ nickname: '', role: '', dept_code: '', school: '' });
 
+    // 삭제 다이얼로그 상태
+    const [softDeleteOpen, setSoftDeleteOpen] = useState(false);
+    const [hardDeleteOpen, setHardDeleteOpen] = useState(false);
+
     useEffect(() => {
         loadUserData();
+        loadCurrentUser();
     }, [userId]);
+
+    const loadCurrentUser = async () => {
+        try {
+            const response = await authAPI.getCurrentUser();
+            setCurrentUser(response.data);
+        } catch (error) {
+            console.error('Failed to load current user:', error);
+        }
+    };
 
     const loadUserData = async () => {
         try {
@@ -102,14 +123,38 @@ export default function UserDetailPage() {
         }
     };
 
-    const handleDelete = async () => {
+    const handleSoftDelete = async () => {
         try {
-            await usersAPI.delete(userId);
-            alert('사용자가 삭제되었습니다.');
+            await usersAPI.softDelete(userId);
+            alert('사용자가 소프트 삭제되었습니다.');
+            await loadUserData();
+        } catch (error: any) {
+            console.error('Failed to soft delete user:', error);
+            const errorMessage = error.response?.data?.detail || '사용자 소프트 삭제에 실패했습니다.';
+            alert(errorMessage);
+        }
+    };
+
+    const handleHardDelete = async () => {
+        try {
+            await usersAPI.hardDelete(userId);
+            alert('사용자가 완전히 삭제되었습니다.');
             router.push('/users');
         } catch (error: any) {
-            console.error('Failed to delete user:', error);
-            const errorMessage = error.response?.data?.detail || '사용자 삭제에 실패했습니다.';
+            console.error('Failed to hard delete user:', error);
+            const errorMessage = error.response?.data?.detail || '사용자 하드 삭제에 실패했습니다.';
+            alert(errorMessage);
+        }
+    };
+
+    const handleRestore = async () => {
+        try {
+            await usersAPI.restore(userId);
+            alert('사용자가 복구되었습니다.');
+            await loadUserData();
+        } catch (error: any) {
+            console.error('Failed to restore user:', error);
+            const errorMessage = error.response?.data?.detail || '사용자 복구에 실패했습니다.';
             alert(errorMessage);
         }
     };
@@ -132,35 +177,119 @@ export default function UserDetailPage() {
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold">유저 상세</h1>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-3xl font-bold">유저 상세</h1>
+                            {user.is_active === 0 && (
+                                <Badge variant="secondary" className="text-sm">비활성</Badge>
+                            )}
+                        </div>
                         <p className="text-muted-foreground mt-2">{user.email}</p>
                     </div>
                 </div>
                 {user.role !== 'super_admin' && (
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                삭제
+                    <div className="flex items-center gap-2">
+                        {/* 비활성 사용자인 경우 복구 버튼 표시 */}
+                        {user.is_active === 0 && (
+                            <Button variant="outline" size="sm" onClick={handleRestore}>
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                복구
                             </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>사용자 삭제 확인</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    정말로 <strong>{user.email}</strong> 사용자를 삭제하시겠습니까?
-                                    <br />
-                                    이 작업은 되돌릴 수 없으며, 모든 관련 데이터(읽음, 즐겨찾기 등)가 함께 삭제됩니다.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>취소</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        )}
+
+                        {/* 삭제 드롭다운 메뉴 */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                    <MoreVertical className="h-4 w-4 mr-2" />
                                     삭제
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                {user.is_active === 1 && (
+                                    <DropdownMenuItem onClick={() => setSoftDeleteOpen(true)}>
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        소프트 삭제
+                                    </DropdownMenuItem>
+                                )}
+                                {currentUser?.role === 'super_admin' && (
+                                    <>
+                                        {user.is_active === 1 && <DropdownMenuSeparator />}
+                                        <DropdownMenuItem
+                                            onClick={() => setHardDeleteOpen(true)}
+                                            className="text-red-600"
+                                        >
+                                            <Skull className="h-4 w-4 mr-2" />
+                                            완전 삭제
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* 소프트 삭제 확인 다이얼로그 */}
+                        <AlertDialog open={softDeleteOpen} onOpenChange={setSoftDeleteOpen}>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>소프트 삭제 확인</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        <strong>{user.email}</strong> 사용자를 소프트 삭제하시겠습니까?
+                                        <br /><br />
+                                        소프트 삭제된 사용자는:
+                                        <ul className="list-disc list-inside mt-2 space-y-1">
+                                            <li>로그인할 수 없습니다</li>
+                                            <li>사용자 목록에서 "비활성" 상태로 표시됩니다</li>
+                                            <li>모든 데이터가 보존되며 복구가 가능합니다</li>
+                                        </ul>
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>취소</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={() => {
+                                            handleSoftDelete();
+                                            setSoftDeleteOpen(false);
+                                        }}
+                                        className="bg-orange-600 hover:bg-orange-700"
+                                    >
+                                        소프트 삭제
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+
+                        {/* 하드 삭제 확인 다이얼로그 */}
+                        <AlertDialog open={hardDeleteOpen} onOpenChange={setHardDeleteOpen}>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-red-600">⚠️ 완전 삭제 경고</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        <strong className="text-red-600">{user.email}</strong> 사용자를 완전히 삭제하시겠습니까?
+                                        <br /><br />
+                                        <strong className="text-red-600">이 작업은 되돌릴 수 없습니다!</strong>
+                                        <ul className="list-disc list-inside mt-2 space-y-1">
+                                            <li>사용자 데이터가 DB에서 영구적으로 삭제됩니다</li>
+                                            <li>모든 관련 데이터(읽음, 즐겨찾기 등)가 함께 삭제됩니다</li>
+                                            <li>복구가 불가능합니다</li>
+                                        </ul>
+                                        <br />
+                                        <strong>Super Admin 권한이 필요합니다.</strong>
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>취소</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={() => {
+                                            handleHardDelete();
+                                            setHardDeleteOpen(false);
+                                        }}
+                                        className="bg-red-600 hover:bg-red-700"
+                                    >
+                                        완전 삭제
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                 )}
             </div>
 

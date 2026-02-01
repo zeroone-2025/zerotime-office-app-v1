@@ -96,6 +96,18 @@ export default function UsersPage() {
             },
         },
         {
+            accessorKey: 'is_active',
+            header: '상태',
+            cell: ({ row }) => {
+                const isActive = row.getValue('is_active') as number;
+                return isActive === 1 ? (
+                    <Badge variant="default">활성</Badge>
+                ) : (
+                    <Badge variant="secondary">비활성</Badge>
+                );
+            },
+        },
+        {
             accessorKey: 'school',
             header: '학교',
         },
