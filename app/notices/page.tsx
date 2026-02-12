@@ -78,6 +78,7 @@ export default function NoticesPage() {
 
         try {
             await noticesAPI.delete(deleteId);
+            alert('공지가 삭제되었습니다.');
             await loadNotices();
         } catch (error) {
             console.error('Failed to delete notice:', error);
