@@ -5,12 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
     useReactTable,
     getCoreRowModel,
-    getSortedRowModel,
+    getFilteredRowModel,
     ColumnDef,
     flexRender,
-    SortingState,
 } from '@tanstack/react-table';
-import { noticesAPI, type AdminNotice, type AdminNoticeListResponse } from '@/lib/api';
+import { chinbaAPI, type AdminChinbaEvent, type AdminChinbaEventListResponse } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -31,184 +30,166 @@ import {
 } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { ExternalLink, Trash2 } from 'lucide-react';
-import { getBoardName, BOARD_OPTIONS } from '@/lib/constants';
 
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+    active: { label: '진행중', variant: 'default' },
+    completed: { label: '종료', variant: 'secondary' },
+    expired: { label: '만료', variant: 'outline' },
+};
 
-export default function NoticesPage() {
+function formatDates(dates: string[]): string {
+    if (dates.length === 0) return '-';
+    const first = dates[0];
+    if (dates.length === 1) return first;
+    return `${first} 외 ${dates.length - 1}일`;
+}
+
+export default function ChinbaEventsPage() {
     return (
         <Suspense fallback={<div className="flex items-center justify-center h-96">로딩 중...</div>}>
-            <NoticesPageContent />
+            <ChinbaEventsPageContent />
         </Suspense>
     );
 }
 
-function NoticesPageContent() {
+function ChinbaEventsPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    const [data, setData] = useState<AdminNoticeListResponse | null>(null);
+    const [data, setData] = useState<AdminChinbaEventListResponse | null>(null);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState(() => searchParams.get('search') || '');
-    const [searchInput, setSearchInput] = useState(() => searchParams.get('search') || '');
+    const [search, setSearch] = useState('');
     const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1);
     const [limit] = useState(10);
-    const [boardFilter, setBoardFilter] = useState<string>(() => searchParams.get('board') || 'all');
-    const [sorting, setSorting] = useState<SortingState>([]);
-    const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'all');
 
     // 상태 변경 시 URL 동기화
     useEffect(() => {
         const params = new URLSearchParams();
         if (page > 1) params.set('page', String(page));
-        if (boardFilter !== 'all') params.set('board', boardFilter);
-        if (search) params.set('search', search);
+        if (statusFilter !== 'all') params.set('status', statusFilter);
         const qs = params.toString();
-        router.replace(qs ? `/notices?${qs}` : '/notices', { scroll: false });
-    }, [page, boardFilter, search, router]);
+        router.replace(qs ? `/chinba?${qs}` : '/chinba', { scroll: false });
+    }, [page, statusFilter, router]);
 
-    const loadNotices = useCallback(async () => {
+    const loadEvents = useCallback(async () => {
         setLoading(true);
         try {
-            const params: Record<string, any> = { page, limit };
-            if (boardFilter !== 'all') params.board_code = boardFilter;
-            if (search) params.search = search;
+            const skip = (page - 1) * limit;
+            const params: Record<string, any> = { skip, limit };
+            if (statusFilter !== 'all') params.status = statusFilter;
 
-            const response = await noticesAPI.getAll(params);
+            const response = await chinbaAPI.getAll(params);
             setData(response.data);
         } catch (error) {
-            console.error('Failed to load notices:', error);
+            console.error('Failed to load chinba events:', error);
         } finally {
             setLoading(false);
         }
-    }, [page, limit, boardFilter, search]);
+    }, [page, limit, statusFilter]);
 
     useEffect(() => {
-        loadNotices();
-    }, [loadNotices]);
+        loadEvents();
+    }, [loadEvents]);
 
-    // 검색 debounce
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setSearch(searchInput);
-            setPage(1);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [searchInput]);
-
-    const handleBoardFilterChange = (value: string) => {
-        setBoardFilter(value);
+    const handleStatusFilterChange = (value: string) => {
+        setStatusFilter(value);
         setPage(1);
     };
 
-    const handleConfirmDelete = async () => {
-        if (!deleteId) return;
+    const events = data?.items ?? [];
+    const totalPages = data ? Math.ceil(data.total / data.per_page) : 0;
 
-        try {
-            await noticesAPI.delete(deleteId);
-            alert('공지가 삭제되었습니다.');
-            await loadNotices();
-        } catch (error) {
-            console.error('Failed to delete notice:', error);
-            alert('공지 삭제에 실패했습니다.');
-        } finally {
-            setDeleteId(null);
-        }
-    };
-
-    const notices = data?.notices ?? [];
-    const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
-
-    const columns: ColumnDef<AdminNotice>[] = [
-        {
-            accessorKey: 'id',
-            header: 'ID',
-            cell: ({ row }) => <div className="w-12">{row.getValue('id')}</div>,
-        },
+    const columns: ColumnDef<AdminChinbaEvent>[] = [
         {
             accessorKey: 'title',
-            header: '제목',
+            header: '이벤트명',
             cell: ({ row }) => (
-                <div className="max-w-md truncate font-medium">{row.getValue('title')}</div>
+                <div className="max-w-[200px] truncate font-medium" title={row.getValue('title')}>
+                    {row.getValue('title')}
+                </div>
             ),
         },
         {
-            accessorKey: 'board_code',
-            header: '게시판',
-            cell: ({ row }) => <Badge variant="outline">{getBoardName(row.getValue('board_code'))}</Badge>,
-        },
-        {
-            accessorKey: 'date',
-            header: '작성일',
+            accessorKey: 'status',
+            header: '상태',
             cell: ({ row }) => {
-                const date = new Date(row.getValue('date'));
-                return format(date, 'yyyy-MM-dd', { locale: ko });
+                const status = row.getValue('status') as string;
+                const config = statusLabels[status] || statusLabels.active;
+                return <Badge variant={config.variant}>{config.label}</Badge>;
             },
         },
         {
-            accessorKey: 'read_count',
-            header: '읽음',
-            cell: ({ row }) => <div className="text-center">{row.getValue('read_count')}</div>,
+            id: 'creator',
+            header: '생성자',
+            cell: ({ row }) => {
+                const nickname = row.original.creator_nickname;
+                const creatorId = row.original.creator_id;
+                return (
+                    <button
+                        className="text-blue-600 hover:underline cursor-pointer"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/users/${creatorId}`);
+                        }}
+                    >
+                        {nickname || `User #${creatorId}`}
+                    </button>
+                );
+            },
         },
         {
-            accessorKey: 'favorite_count',
-            header: '즐겨찾기',
-            cell: ({ row }) => <div className="text-center">{row.getValue('favorite_count')}</div>,
+            id: 'participation',
+            header: '참여인원',
+            cell: ({ row }) => (
+                <div className="text-center">
+                    {row.original.submitted_count}/{row.original.participant_count}
+                </div>
+            ),
+        },
+        {
+            accessorKey: 'dates',
+            header: '날짜',
+            cell: ({ row }) => formatDates(row.getValue('dates') as string[]),
+        },
+        {
+            accessorKey: 'created_at',
+            header: '생성일',
+            cell: ({ row }) => {
+                const date = new Date(row.getValue('created_at'));
+                return format(date, 'yyyy-MM-dd', { locale: ko });
+            },
         },
         {
             id: 'actions',
             header: '작업',
             cell: ({ row }) => (
-                <div className="flex gap-2">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(row.original.link, '_blank');
-                        }}
-                    >
-                        <ExternalLink className="h-3 w-3" />
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteId(row.original.id);
-                        }}
-                    >
-                        <Trash2 className="h-3 w-3" />
-                    </Button>
-                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/chinba/${row.original.event_id}`);
+                    }}
+                >
+                    상세보기
+                </Button>
             ),
         },
     ];
 
     const table = useReactTable({
-        data: notices,
+        data: events,
         columns,
         getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
         manualPagination: true,
         pageCount: totalPages,
-        onSortingChange: setSorting,
         state: {
-            sorting,
+            globalFilter: search,
             pagination: { pageIndex: page - 1, pageSize: limit },
         },
+        onGlobalFilterChange: setSearch,
     });
 
     if (loading && !data) {
@@ -218,32 +199,32 @@ function NoticesPageContent() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold">공지 관리</h1>
-                <p className="text-muted-foreground mt-2">전체 공지 목록 및 관리</p>
+                <h1 className="text-3xl font-bold">친바 관리</h1>
+                <p className="text-muted-foreground mt-2">친바 이벤트 목록 및 관리</p>
             </div>
 
+            {/* 검색 + 상태 필터 */}
             <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <Input
-                    placeholder="제목 검색..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder="현재 페이지 내 검색..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
                     className="w-full sm:max-w-sm"
                 />
-                <Select value={boardFilter} onValueChange={handleBoardFilterChange}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                        <SelectValue placeholder="게시판 필터" />
+                <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="상태 필터" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">전체</SelectItem>
-                        {BOARD_OPTIONS.map((board) => (
-                            <SelectItem key={board.code} value={board.code}>
-                                {board.name}
-                            </SelectItem>
-                        ))}
+                        <SelectItem value="active">진행중</SelectItem>
+                        <SelectItem value="completed">종료</SelectItem>
+                        <SelectItem value="expired">만료</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
 
+            {/* 테이블 */}
             <div className="rounded-md border overflow-x-auto">
                 <Table>
                     <TableHeader>
@@ -265,7 +246,7 @@ function NoticesPageContent() {
                                 <TableRow
                                     key={row.id}
                                     className="cursor-pointer"
-                                    onClick={() => window.open(row.original.link, '_blank')}
+                                    onClick={() => router.push(`/chinba/${row.original.event_id}`)}
                                 >
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell key={cell.id}>
@@ -285,9 +266,10 @@ function NoticesPageContent() {
                 </Table>
             </div>
 
+            {/* 페이지네이션 */}
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm text-muted-foreground">
-                    총 {data?.total ?? 0}개의 공지
+                    총 {data?.total ?? 0}개의 이벤트
                 </div>
                 {totalPages > 1 && (
                     <div className="flex items-center gap-1">
@@ -339,23 +321,6 @@ function NoticesPageContent() {
                     </div>
                 )}
             </div>
-
-            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>정말 이 공지를 삭제하시겠습니까?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            이 작업은 되돌릴 수 없으며, 공지가 영구적으로 삭제됩니다.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>취소</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            삭제
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </div>
     );
 }

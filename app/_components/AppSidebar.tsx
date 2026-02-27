@@ -12,7 +12,7 @@ import {
     SidebarHeader,
     SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, FileText, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Calendar, LogOut } from 'lucide-react';
 import LogoSymbol from '@/components/ui/LogoSymbol';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -21,6 +21,7 @@ const menuItems = [
     { title: '대시보드', icon: LayoutDashboard, href: '/dashboard' },
     { title: '유저 관리', icon: Users, href: '/users' },
     { title: '공지 관리', icon: FileText, href: '/notices' },
+    { title: '친바 관리', icon: Calendar, href: '/chinba' },
 ];
 
 export function AppSidebar() {
@@ -40,7 +41,7 @@ export function AppSidebar() {
                         <LogoSymbol className="h-5 w-5" />
                     </div>
                     <div>
-                        <p className="text-sm font-bold tracking-tight">백오피스</p>
+                        <p className="text-sm font-bold tracking-tight">제로타임 백오피스</p>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Admin Panel</p>
                     </div>
                 </div>
