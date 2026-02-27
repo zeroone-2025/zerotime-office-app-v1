@@ -56,12 +56,31 @@ export interface AdminUser {
     school: string;
     profile_image?: string;
     role: 'user' | 'admin' | 'super_admin';
+    user_type: 'student' | 'mentor';
     admission_year?: number;
     is_active: number;  // 1=활성, 0=비활성
     created_at: string;
     read_count: number;
     favorite_count: number;
     keyword_count: number;
+}
+
+export interface AdminUserListResponse {
+    users: AdminUser[];
+    total: number;
+    page: number;
+    limit: number;
+    student_count: number;
+    mentor_count: number;
+}
+
+export interface AdminUserListParams {
+    page?: number;
+    limit?: number;
+    role?: string;
+    user_type?: string;
+    sort?: string;
+    order?: string;
 }
 
 export interface AdminUserDetail extends AdminUser {
@@ -105,6 +124,89 @@ export interface Keyword {
     created_at: string;
 }
 
+// ==================== 시간표 타입 ====================
+
+export interface TimetableClass {
+    id: number;
+    name: string;
+    professor?: string;
+    location?: string;
+    day: number;
+    start_time: string;
+    end_time: string;
+}
+
+export interface Timetable {
+    id: number;
+    user_id: number;
+    semester: string;
+    classes: TimetableClass[];
+    created_at: string;
+    updated_at: string;
+}
+
+// ==================== 경력 타입 ====================
+
+export interface CareerEducation {
+    id: number;
+    start_date: string;
+    end_date?: string;
+    is_current: boolean;
+    school: string;
+    major: string;
+    degree: string;
+    status: string;
+    region?: string;
+}
+
+export interface CareerWork {
+    id: number;
+    start_date: string;
+    end_date?: string;
+    is_current: boolean;
+    company: string;
+    position: string;
+    employment_type: string;
+    region?: string;
+}
+
+export interface CareerCertification {
+    id: number;
+    name: string;
+    date?: string;
+}
+
+export interface CareerActivity {
+    id: number;
+    name: string;
+    period?: string;
+    description?: string;
+}
+
+export interface MentorQnA {
+    targeted_capital?: boolean;
+    reason_for_local?: string;
+    helpful_organizations?: string;
+    local_advantages?: string;
+    local_disadvantages?: string;
+    advice_for_juniors?: string;
+}
+
+export interface CareerProfile {
+    id: number;
+    name?: string;
+    email?: string;
+    phone?: string;
+    visibility: string;
+    skill_tags: string[];
+    is_mentor: boolean;
+    educations: CareerEducation[];
+    works: CareerWork[];
+    certifications: CareerCertification[];
+    activities: CareerActivity[];
+    mentor_qna?: MentorQnA;
+}
+
 // ==================== API 함수 ====================
 
 // 인증
@@ -120,8 +222,8 @@ export const dashboardAPI = {
 
 // 유저 관리
 export const usersAPI = {
-    getAll: (params?: { skip?: number; limit?: number; search?: string; role?: string }) =>
-        api.get<AdminUser[]>('/admin/users', { params }),
+    getAll: (params?: AdminUserListParams) =>
+        api.get<AdminUserListResponse>('/admin/users', { params }),
 
     getDetail: (userId: number) =>
         api.get<AdminUserDetail>(`/admin/users/${userId}`),
@@ -146,13 +248,87 @@ export const usersAPI = {
 
     restore: (userId: number) =>
         api.post(`/admin/users/${userId}/restore`),
+
+    getTimetable: (userId: number, semester?: string) =>
+        api.get<Timetable | null>(`/admin/users/${userId}/timetable`, { params: semester ? { semester } : undefined }),
+
+    getCareer: (userId: number) =>
+        api.get<CareerProfile>(`/admin/users/${userId}/career`),
 };
 
 // 공지 관리
+export interface AdminNoticeListResponse {
+    notices: AdminNotice[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
 export const noticesAPI = {
-    getAll: (params?: { skip?: number; limit?: number; board_code?: string; search?: string }) =>
-        api.get<AdminNotice[]>('/admin/notices', { params }),
+    getAll: (params?: { page?: number; limit?: number; board_code?: string; search?: string }) =>
+        api.get<AdminNoticeListResponse>('/admin/notices', { params }),
 
     delete: (noticeId: number) =>
         api.delete(`/admin/notices/${noticeId}`),
+};
+
+// ==================== 학과 ====================
+
+export interface Department {
+    id: number;
+    dept_code: string;
+    dept_name: string;
+    college_name?: string;
+    school: string;
+}
+
+export const departmentsAPI = {
+    getAll: () => api.get<Department[]>('/departments'),
+};
+
+// ==================== 친바 이벤트 타입 ====================
+
+export interface AdminChinbaEvent {
+    event_id: string;
+    title: string;
+    dates: string[];
+    start_hour: number;
+    end_hour: number;
+    status: 'active' | 'completed' | 'expired';
+    creator_id: number;
+    creator_nickname?: string;
+    creator_email?: string;
+    participant_count: number;
+    submitted_count: number;
+    created_at: string;
+}
+
+export interface AdminChinbaParticipant {
+    user_id: number;
+    nickname?: string;
+    email?: string;
+    has_submitted: boolean;
+    submitted_at?: string;
+}
+
+export interface AdminChinbaEventDetail extends AdminChinbaEvent {
+    participants: AdminChinbaParticipant[];
+    updated_at?: string;
+}
+
+export interface AdminChinbaEventListResponse {
+    items: AdminChinbaEvent[];
+    total: number;
+    page: number;
+    per_page: number;
+}
+
+// 친바 이벤트 관리
+export const chinbaAPI = {
+    getAll: (params?: { skip?: number; limit?: number; status?: string }) =>
+        api.get<AdminChinbaEventListResponse>('/admin/chinba/events', { params }),
+    getDetail: (eventId: string) =>
+        api.get<AdminChinbaEventDetail>(`/admin/chinba/events/${eventId}`),
+    getParticipants: (eventId: string) =>
+        api.get<AdminChinbaParticipant[]>(`/admin/chinba/events/${eventId}/participants`),
 };
