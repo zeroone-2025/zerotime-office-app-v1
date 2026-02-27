@@ -311,8 +311,24 @@ export interface AdminChinbaParticipant {
     submitted_at?: string;
 }
 
+export interface ChinbaHeatmapSlot {
+    dt: string;
+    unavailable_count: number;
+    unavailable_members: string[];
+}
+
+export interface ChinbaRecommendedTime {
+    date: string;
+    start_time: string;
+    end_time: string;
+    available_count: number;
+    all_available: boolean;
+}
+
 export interface AdminChinbaEventDetail extends AdminChinbaEvent {
     participants: AdminChinbaParticipant[];
+    heatmap: ChinbaHeatmapSlot[];
+    recommended_times: ChinbaRecommendedTime[];
     updated_at?: string;
 }
 
