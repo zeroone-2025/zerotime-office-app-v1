@@ -24,6 +24,7 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import ScheduleHeatmap from './_components/ScheduleHeatmap';
 
 const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
     active: { label: '진행중', variant: 'default' },
@@ -157,6 +158,7 @@ export default function ChinbaEventDetailPage() {
             <Tabs defaultValue="stats">
                 <TabsList>
                     <TabsTrigger value="stats">참여 현황</TabsTrigger>
+                    <TabsTrigger value="schedule">일정 히트맵</TabsTrigger>
                     <TabsTrigger value="participants">참여 인원 목록</TabsTrigger>
                 </TabsList>
 
@@ -167,6 +169,28 @@ export default function ChinbaEventDetailPage() {
                         notSubmitted={notSubmittedCount}
                         submitRate={submitRate}
                     />
+                </TabsContent>
+
+                <TabsContent value="schedule" className="mt-4">
+                    {submittedCount === 0 ? (
+                        <Card>
+                            <CardContent className="py-12">
+                                <p className="text-center text-muted-foreground">
+                                    아직 일정을 제출한 참여자가 없습니다.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <ScheduleHeatmap
+                            dates={event.dates}
+                            heatmap={event.heatmap}
+                            recommendedTimes={event.recommended_times}
+                            startHour={event.start_hour}
+                            endHour={event.end_hour}
+                            totalParticipants={event.participants.length}
+                            submittedCount={submittedCount}
+                        />
+                    )}
                 </TabsContent>
 
                 <TabsContent value="participants" className="mt-4">
